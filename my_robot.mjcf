@@ -1,0 +1,175 @@
+<mujoco>
+    <compiler angle="radian"/>
+    
+    <asset>
+        <mesh name="base_mesh" file="mesh/base.STL" scale="0.001 0.001 0.001"/>
+        
+        <mesh name="hip_1_mesh" file="mesh/hip1.STL" scale="0.001 0.001 0.001"/>
+        <mesh name="hip_3_mesh" file="mesh/hip3.STL" scale="0.001 0.001 0.001"/>
+        <mesh name="hip_5_mesh" file="mesh/hip5.STL" scale="0.001 0.001 0.001"/>
+        <mesh name="hip_7_mesh" file="mesh/hip7.STL" scale="0.001 0.001 0.001"/>
+        
+        <mesh name="hip_servo_1_mesh" file="mesh/hip_servo1.STL" scale="0.001 0.001 0.001"/>
+        <mesh name="hip_servo_3_mesh" file="mesh/hip_servo3.STL" scale="0.001 0.001 0.001"/>
+        <mesh name="hip_servo_5_mesh" file="mesh/hip_servo5.STL" scale="0.001 0.001 0.001"/>
+        <mesh name="hip_servo_7_mesh" file="mesh/hip_servo7.STL" scale="0.001 0.001 0.001"/>
+        
+        <mesh name="thigh_1_mesh" file="mesh/upper_leg_1.STL" scale="0.001 0.001 0.001"/>
+        <mesh name="thigh_3_mesh" file="mesh/upper_leg_3.STL" scale="0.001 0.001 0.001"/>
+        <mesh name="thigh_5_mesh" file="mesh/upper_leg_5.STL" scale="0.001 0.001 0.001"/>
+        <mesh name="thigh_7_mesh" file="mesh/upper_leg_7.STL" scale="0.001 0.001 0.001"/>
+
+        <mesh name="knee_servo_1_mesh" file="mesh/knee_servo1.STL" scale="0.001 0.001 0.001"/>
+        <mesh name="knee_servo_3_mesh" file="mesh/knee_servo3.STL" scale="0.001 0.001 0.001"/>
+        <mesh name="knee_servo_5_mesh" file="mesh/knee_servo5.STL" scale="0.001 0.001 0.001"/>
+        <mesh name="knee_servo_7_mesh" file="mesh/knee_servo7.STL" scale="0.001 0.001 0.001"/>
+
+        <mesh name="lower_leg_1_mesh" file="mesh/lower_leg_1.STL" scale="0.001 0.001 0.001"/>
+        <mesh name="lower_leg_3_mesh" file="mesh/lower_leg_3.STL" scale="0.001 0.001 0.001"/>
+        <mesh name="lower_leg_5_mesh" file="mesh/lower_leg_5.STL" scale="0.001 0.001 0.001"/>
+        <mesh name="lower_leg_7_mesh" file="mesh/lower_leg_7.STL" scale="0.001 0.001 0.001"/>
+        
+        <texture type="skybox" builtin="gradient" rgb1="1 1 1" rgb2=".6 .8 1" width="256" height="256" />
+        <texture name="texplane" type="2d" builtin="checker" rgb1=".2 .3 .4" rgb2=".1 0.15 0.2" width="512" height="512"/>
+        <material name="matplane" texture="texplane" texrepeat="1 1" texuniform="true" />
+
+        <material name="base_mat" rgba="0 0 1 1"/> <material name="hip_attach_mat" rgba="0.7 0.7 0.7 1"/> <material name="hip_servo_mat" rgba="0.4 0.4 0.4 1"/> <material name="knee_servo_mat" rgba="0.2 0.2 0.2 1"/> <material name="leg_1_mat" rgba="0 1 0 1"/> <material name="leg_3_mat" rgba="1 0.5 0 1"/> <material name="leg_5_mat" rgba="1 0 1 1"/> <material name="leg_7_mat" rgba="0 1 1 1"/> </asset>
+
+    <worldbody>
+        <light directional="true" diffuse=".4 .4 .4" specular="0.1 0.1 0.1" pos="0 0 3" dir="0 0 -1" />
+        <geom name="ground" type="plane" size="0 0 1" pos="0 0 0" quat="1 0 0 0" material="matplane" condim="1" />
+        
+        <body name="body_base" pos="0 0 0.3" euler="1.57 0 0"> <freejoint/>
+            <inertial pos="0.0457 0.0666 0.1059"
+                      mass="0.23328"
+                      fullinertia="0.001213964 0.002007228 0.000794665 1.7e-8 -3.678e-6 1.48e-7" />
+            <geom type="mesh" mesh="base_mesh" material="base_mat"/> 
+            
+            <body name="hip_1">
+                <inertial pos="0.1013 0.0586 0.0163" mass="0.00581"
+                          fullinertia="4.95e-7 1.499e-6 1.323e-6 4.6e-8 0.0 0.0" />
+                <geom type="mesh" mesh="hip_1_mesh" material="hip_attach_mat"/> 
+                <body name="hip_1_bracket">
+                    <inertial pos="0.1006 0.0259 0.0164" mass="0.03441"
+                              fullinertia="7.524e-6 4.641e-6 8.648e-6 2.8e-8 0.0 -2.6e-8" />
+                    <geom type="mesh" mesh="hip_servo_1_mesh" material="hip_servo_mat"/>
+                    <body name="thigh_1">
+                        <joint name="hip_1_joint" type="hinge" pos="0.11634 0.01310 0.01798" axis="1 0 0" range="-1.5 1.5"/>
+                        <inertial pos="0.1024 -0.0333 0.0083" mass="0.04892"
+                                  fullinertia="2.8557e-5 1.0637e-5 3.4303e-5 -9.43e-7 -1.50e-7 4.349e-6" />
+                        <geom type="mesh" mesh="thigh_1_mesh" material="leg_1_mat"/>
+                        <body name="knee_1_servo">
+                            <inertial pos="0.1038 -0.0978 -0.0044" mass="0.03441"
+                                      fullinertia="7.525e-6 4.801e-6 8.489e-6 2.1e-8 1.0e-8 7.83e-7" />
+                            <geom type="mesh" mesh="knee_servo_1_mesh" material="knee_servo_mat"/>
+                            <body name="lower_leg_1">
+                                <joint name="knee_1_joint" type="hinge" pos="0.118546 -0.110850 -0.0069576" axis="1 0 0" range="-1.5 1.5"/>
+                                <inertial pos="0.1043 -0.1649 -0.0100" mass="0.06944"
+                                          fullinertia="6.8075e-5 1.2139e-5 7.3272e-5 -2.1e-7 -1.25e-7 2.568e-6" />
+                                <geom type="mesh" mesh="lower_leg_1_mesh" material="leg_1_mat"/>
+                            </body>
+                        </body>
+                    </body>
+                </body>
+            </body>
+
+            <body name="hip_3">
+                <inertial pos="-0.0117 0.0586 0.0163" mass="0.00581"
+                          fullinertia="4.95e-7 1.499e-6 1.323e-6 4.6e-8 0.0 0.0" />
+                <geom type="mesh" mesh="hip_3_mesh" material="hip_attach_mat"/> 
+                <body name="hip_3_bracket">
+                    <inertial pos="-0.0114 0.0259 0.0162" mass="0.03441"
+                              fullinertia="7.524e-6 4.641e-6 8.648e-6 2.8e-8 0.0 2.6e-8" />
+                    <geom type="mesh" mesh="hip_servo_3_mesh" material="hip_servo_mat"/>
+                    <body name="thigh_3">
+                        <joint name="hip_3_joint" type="hinge" pos="0.00331278 0.0125473 0.0161566" axis="1 0 0" range="-1.5 1.5"/>
+                        <inertial pos="-0.0122 -0.0348 0.0163" mass="0.04896"
+                                  fullinertia="2.8625e-5 9.912e-6 3.5151e-5 1.227e-6 4.5e-8 6.55e-7" />
+                        <geom type="mesh" mesh="thigh_3_mesh" material="leg_3_mat"/>
+                        <body name="knee_3_servo">
+                            <inertial pos="-0.0136 -0.1006 0.0156" mass="0.03441"
+                                      fullinertia="7.525e-6 4.641e-6 8.648e-6 -2.7e-8 -1.3e-8 2.4e-8" />
+                            <geom type="mesh" mesh="knee_servo_3_mesh" material="knee_servo_mat"/>
+                            <body name="lower_leg_3">
+                                <joint name="knee_3_joint" type="hinge" pos="0.0013374 -0.11373 0.01535" axis="1 0 0" range="-1.5 1.5"/>
+                                <inertial pos="-0.0118 -0.1685 0.0164" mass="0.06944"
+                                          fullinertia="6.8054e-5 1.2050e-5 7.3382e-5 -1.041e-6 -1.4e-8 -7.7e-8" />
+                                <geom type="mesh" mesh="lower_leg_3_mesh" material="leg_3_mat"/>
+                            </body>
+                        </body>
+                    </body>
+                </body>
+            </body>
+
+            <body name="hip_5">
+                <inertial pos="0.1023 0.0586 0.1917" mass="0.00581"
+                          fullinertia="4.95e-7 1.499e-6 1.323e-6 -4.6e-8 0.0 0.0" />
+                <geom type="mesh" mesh="hip_5_mesh" material="hip_attach_mat"/> 
+                <body name="hip_5_bracket">
+                    <inertial pos="0.1020 0.0258 0.1917" mass="0.03441"
+                              fullinertia="7.524e-6 4.641e-6 8.649e-6 -2.8e-8 0.0 6.0e-9" />
+                    <geom type="mesh" mesh="hip_servo_5_mesh" material="hip_servo_mat"/>
+                    <body name="thigh_5">
+                        <joint name="hip_5_joint" type="hinge" pos="0.08731278 0.0124678 0.1917023" axis="1 0 0" range="-1.5 1.5"/>
+                        <inertial pos="0.1027 -0.0347 0.1882" mass="0.04896"
+                                  fullinertia="2.8625e-5 9.951e-6 3.5112e-5 -1.227e-6 -4.5e-8 1.189e-6" />
+                        <geom type="mesh" mesh="thigh_5_mesh" material="leg_5_mat"/>
+                        <body name="knee_5_servo">
+                            <inertial pos="0.1044 -0.1005 0.1834" mass="0.03441"
+                                      fullinertia="7.525e-6 4.673e-6 8.616e-6 -1.9e-8 -2.6e-8 3.57e-7" />
+                            <geom type="mesh" mesh="knee_servo_5_mesh" material="knee_servo_mat"/>
+                            <body name="lower_leg_5">
+                                <joint name="knee_5_joint" type="hinge" pos="0.089706 -0.11386 0.182579" axis="1 0 0" range="-1.5 1.5"/>
+                                <inertial pos="0.1049 -0.1683 0.1832" mass="0.06944"
+                                          fullinertia="6.8063e-5 1.2141e-5 7.3282e-5 -7.94e-7 -3.9e-8 -2.46e-6" />
+                                <geom type="mesh" mesh="lower_leg_5_mesh" material="leg_5_mat"/>
+                            </body>
+                        </body>
+                    </body>
+                </body>
+            </body>
+
+            <body name="hip_7">
+                <inertial pos="-0.0107 0.0586 0.1917" mass="0.00581"
+                          fullinertia="4.95e-7 1.499e-6 1.323e-6 -4.6e-8 0.0 0.0" />
+                <geom type="mesh" mesh="hip_7_mesh" material="hip_attach_mat"/> 
+                <body name="hip_7_bracket">
+                    <inertial pos="-0.0110 0.0261 0.1918" mass="0.03441"
+                              fullinertia="7.524e-6 4.641e-6 8.649e-6 -2.8e-8 0.0 -9.0e-9" />
+                    <geom type="mesh" mesh="hip_servo_7_mesh" material="hip_servo_mat"/>
+                    <body name="thigh_7">
+                        <joint name="hip_7_joint" type="hinge" pos="-0.025687 0.012735 0.19182" axis="1 0 0" range="-1.5 1.5"/>
+                        <inertial pos="-0.0118 -0.0345 0.1920" mass="0.04892"
+                                  fullinertia="2.8557e-5 9.884e-6 3.5056e-5 9.54e-7 4.5e-8 7.18e-7" />
+                        <geom type="mesh" mesh="thigh_7_mesh" material="leg_7_mat"/>
+                        <body name="knee_7_servo">
+                            <inertial pos="-0.0128 -0.1006 0.1913" mass="0.03441"
+                                      fullinertia="7.524e-6 4.642e-6 8.648e-6 -3.7e-8 -1.5e-8 -3.0e-8" />
+                            <geom type="mesh" mesh="knee_servo_7_mesh" material="knee_servo_mat"/>
+                            <body name="lower_leg_7">
+                                <joint name="knee_7_joint" type="hinge" pos="-0.02748 -0.11399 0.191629" axis="1 0 0" range="-1.5 1.5"/>
+                                <inertial pos="-0.0130 -0.1683 0.1928" mass="0.06944"
+                                          fullinertia="6.8073e-5 1.2031e-5 7.3381e-5 6.7e-8 4.0e-9 -1.72e-7" />
+                                <geom type="mesh" mesh="lower_leg_7_mesh" material="leg_7_mat"/>
+                            </body>
+                        </body>
+                    </body>
+                </body>
+            </body>
+
+        </body>
+    </worldbody>
+
+    <actuator>
+        <position name="hip_1_servo" joint="hip_1_joint" kp="20"/>
+        <position name="hip_3_servo" joint="hip_3_joint" kp="20"/>
+        <position name="hip_5_servo" joint="hip_5_joint" kp="20"/>
+        <position name="hip_7_servo" joint="hip_7_joint" kp="20"/>
+    
+        <position name="knee_1_servo" joint="knee_1_joint" kp="20"/>
+        <position name="knee_3_servo" joint="knee_3_joint" kp="20"/>
+        <position name="knee_5_servo" joint="knee_5_joint" kp="20"/>
+        <position name="knee_7_servo" joint="knee_7_joint" kp="20"/>
+    </actuator>
+    
+</mujoco>

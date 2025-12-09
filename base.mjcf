@@ -1,0 +1,35 @@
+<mujoco>
+    <compiler angle="radian"/>
+    
+    <asset>
+        <mesh name="base_mese" file="mesh/base.STL" scale="0.001 0.001 0.001"/>
+        <mesh name="hip_mesh" file="mesh/hip1.STL" scale="0.001 0.001 0.001"/>
+        <texture type="skybox" builtin="gradient" rgb1="1 1 1" rgb2=".6 .8 1" width="256" height="256" />
+        <texture name="texplane" type="2d" builtin="checker" rgb1=".2 .3 .4" rgb2=".1 0.15 0.2" width="512" height="512"/>
+        <material name="matplane" texture="texplane" texrepeat="1 1" texuniform="true" />
+    </asset>
+
+    <worldbody>
+        <light directional="true" diffuse=".4 .4 .4" specular="0.1 0.1 0.1" pos="0 0 3" dir="0 0 -1" />
+        <geom name="ground" type="plane" size="0 0 1" pos="0 0 0" quat="1 0 0 0" material="matplane" condim="1" />
+        
+        <body name="body_base">
+            <freejoint/>
+            
+            <inertial pos="0.0154 0.0030 0.0609"
+              mass="0.23328"
+              fullinertia="0.00121396 0.00200723 0.00079467 1.7e-8 -3.678e-6 1.48e-7" />
+            
+            <geom type="mesh" mesh="base_mesh" rgba="1 0 0 1"/>
+            
+            <body name="front_left_hip_attach">
+                <inertial pos="0.0015 0.0195 0.0011"
+                mass="0.00581"
+                fullinertia="4.95e-7 1.499e-6 1.323e-6 4.6e-8 0.0 0.0" />
+                
+                <geom type="mesh" mesh="hip_mesh" rgba="0 1 0 1"/>
+                
+            </body>
+        </body>
+    </worldbody>
+</mujoco>
