@@ -7,101 +7,123 @@ import time
 model = mujoco.MjModel.from_xml_path('my_robot.mjcf')
 data = mujoco.MjData(model)
 
-actuator_names = [
-    "hip_1_servo", "knee_1_servo",
-    "hip_3_servo", "knee_3_servo",
-    "hip_5_servo", "knee_5_servo",
-    "hip_7_servo", "knee_7_servo"
-]
-num_actuators = len(actuator_names)
+# --- PHYSICS TUNING ---
+# 1. High Gravity to stop jumping
+model.opt.gravity[:] = [0, 0, -20.0]
+# 2. Smaller timestep for stable math (default is usually 0.002)
+model.opt.timestep = 0.002 
 
-# 2. GAIT FUNCTION (With clipped limits for safety)
+# --- INDICES (Corrected) ---
+GROUP_A_HIPS  = [0, 3] # Leg 1 & 7
+GROUP_A_KNEES = [4, 7]
+GROUP_B_HIPS  = [1, 2] # Leg 3 & 5
+GROUP_B_KNEES = [5, 6]
+
+# 2. GAIT FUNCTION
 def get_action(time, params):
-    actions = []
-    w = 3.0 # Slower frequency = less jumping
+    actions = np.zeros(8)
+    w = 2.0 
     
-    for i in range(num_actuators):
-        a = params[i*3 + 0] 
-        b = params[i*3 + 1]
-        c = params[i*3 + 2]
-        
-        theta = a + b * np.sin(w * time + c)
-        theta = np.clip(theta, -1.0, 1.0) # Tighter limits to prevent high kicks
-        actions.append(theta)
-        
-    return np.array(actions)
+    # Unpack 5 variables
+    hip_a, hip_b = params[0], params[1]
+    knee_a, knee_b, knee_c = params[2], params[3], params[4]
+    
+    # --- STABILITY LIMITS ---
+    # Force the "Center" (a) to be near 0 so it stays standing
+    hip_a = np.clip(hip_a, -0.2, 0.2)
+    knee_a = np.clip(knee_a, -0.2, 0.2)
+    
+    # Limit Amplitude
+    hip_b = np.clip(hip_b, 0.0, 0.5)
+    knee_b = np.clip(knee_b, 0.0, 0.5)
+    
+    def get_val(center, amp, phase):
+        return np.clip(center + amp * np.sin(w * time + phase), -1.0, 1.0)
 
-# 3. EVALUATION LOOP (With Stability Checks)
-def evaluate_gait(params, duration=5.0):
+    # Group A (Phase 0)
+    base_hip  = get_val(hip_a, hip_b, 0)
+    base_knee = get_val(knee_a, knee_b, 0 + knee_c)
+    
+    # Group B (Phase PI)
+    opp_hip   = get_val(hip_a, hip_b, np.pi)
+    opp_knee  = get_val(knee_a, knee_b, np.pi + knee_c)
+    
+    # Assign
+    for i in GROUP_A_HIPS:  actions[i] = base_hip
+    for i in GROUP_A_KNEES: actions[i] = base_knee
+    for i in GROUP_B_HIPS:  actions[i] = opp_hip
+    for i in GROUP_B_KNEES: actions[i] = opp_knee
+        
+    return actions
+
+# 3. EVALUATION (With Decimation)
+def evaluate_gait(params, duration=6.0):
     mujoco.mj_resetData(model, data)
-    steps = int(duration / model.opt.timestep)
-    total_energy_cost = 0
+    
+    # PHYSICS SETTINGS
+    physics_dt = model.opt.timestep  # e.g. 0.002s
+    control_dt = 0.05                # Update motors every 0.05s (20Hz)
+    
+    # How many physics steps per one control step?
+    n_substeps = int(control_dt / physics_dt)
+    
+    steps = int(duration / control_dt)
     
     for _ in range(steps):
+        # 1. Calculate Action ONCE
         ctrl = get_action(data.time, params)
         data.ctrl[:] = ctrl
-        mujoco.mj_step(model, data)
         
-        # --- STABILITY CHECK 1: EXPLOSION ---
-        if not np.all(np.isfinite(data.qpos)):
-            return -1000.0
+        # 2. Run Physics for N steps with the SAME action
+        # This acts like a "Hold" filter, smoothing the motion
+        for _ in range(n_substeps):
+            mujoco.mj_step(model, data)
             
-        # --- STABILITY CHECK 2: FALLING ---
-        # If torso height (z-axis) drops below 0.15m, robot has fallen.
-        z_height = data.body('body_base').xpos[2]
-        if z_height < 0.15: 
-            return -50.0 # Huge penalty for falling
-            
-        # --- STABILITY CHECK 3: ENERGY ---
-        # Penalize large, violent movements (sum of squared commands)
-        total_energy_cost += np.sum(np.square(ctrl))
+            # Crash Check inside the sub-loop
+            if not np.all(np.isfinite(data.qpos)): return -1000.0
+            if data.body('body_base').xpos[2] < 0.1: return -50.0
 
-    # Calculate final score
-    distance = data.body('body_base').xpos[0]
-    
-    # Score = Distance - (Energy used * small weight)
-    # This encourages "efficient" movement over "violent" movement
-    score = distance - (total_energy_cost * 0.001)
-    
-    return score
+    return data.body('body_base').xpos[0]
 
-# 4. HILL CLIMBER (Evolution)
-# Start with a safe "Standing" pose (Offsets=0, Amplitudes=0.1)
-current_params = []
-for _ in range(num_actuators):
-    current_params.extend([0.0, 0.1, 0.0]) 
-current_params = np.array(current_params)
-
+# 4. HILL CLIMBER
+current_params = np.array([0.0, 0.2, 0.0, 0.2, 1.5]) # Safe start
 best_score = evaluate_gait(current_params)
-print(f"Baseline Score (Standing): {best_score:.3f}")
-print("Starting Hill Climber...")
+print(f"Baseline: {best_score:.3f}")
+print("Starting Stable Training...")
 
-# Try to improve 500 times
 for i in range(500): 
-    # 1. Mutate: Add small changes to our best params
-    # We use small noise (std dev 0.05) so it doesn't "jump" to crazy values
-    noise = np.random.normal(0, 0.05, size=current_params.shape)
+    noise = np.random.normal(0, 0.1, size=current_params.shape)
     candidate_params = current_params + noise
     
-    # 2. Evaluate
     score = evaluate_gait(candidate_params)
     
-    # 3. Selection
     if score > best_score:
-        print(f"Iter {i}: Improved! Score: {best_score:.3f} -> {score:.3f}")
+        print(f"Iter {i}: Improved! {best_score:.2f} -> {score:.2f}")
         best_score = score
-        current_params = candidate_params # Adopt the new gene
-    # If not better, we just discard 'candidate_params' and try again
+        current_params = candidate_params
 
-print("Training finished.")
+print("Done.")
 
-# 5. VISUALIZE
-print("Visualizing best walker... (Press ESC to exit)")
+# 5. VISUALIZE (With Decimation Logic)
+print("Visualizing...")
 mujoco.mj_resetData(model, data)
 with mujoco.viewer.launch_passive(model, data) as viewer:
+    control_dt = 0.05
+    last_control_time = 0
+    
     while viewer.is_running():
-        step_start = time.time()
-        data.ctrl[:] = get_action(data.time, current_params)
+        # Only update motors if enough time has passed
+        if data.time - last_control_time >= control_dt:
+            data.ctrl[:] = get_action(data.time, current_params)
+            last_control_time = data.time
+            
         mujoco.mj_step(model, data)
         viewer.sync()
+        
+        # Check for crashes
+        if not np.all(np.isfinite(data.qpos)):
+            print("Resetting...")
+            mujoco.mj_resetData(model, data)
+
+        # Real-time sleep
         time.sleep(model.opt.timestep)
